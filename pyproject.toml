@@ -2,7 +2,7 @@
 name = "driver_serivce"
 version = "0.1.0"
 description = ""
-authors = ["Renat Iliev <renat.iliev@cndt.app>"]
+authors = ["Conduit.app <support@cndt.app>"]
 
 [tool.poetry.dependencies]
 python = "~3.9"
