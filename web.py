@@ -4,7 +4,7 @@ import random
 from enum import Enum
 from typing import Callable
 
-from fastapi import Body, Depends, FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from starlette import status
 from starlette.requests import Request
@@ -22,13 +22,13 @@ async def timeout_middleware(
     request: Request, call_next: Callable[[Request], Response]
 ):
     """
-    Limits request processing time
+    Ограничение времени обработки запроса
     """
     try:
         return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT)
     except asyncio.TimeoutError:
         return JSONResponse(
-            {"detail": "Request processing time exceeded limit"},
+            {"detail": "request processing timeout"},
             status_code=status.HTTP_408_REQUEST_TIMEOUT,
         )
 
@@ -52,7 +52,9 @@ class AccountInfo(BaseModel):
     native_id: str
 
 
-class AccountsResponse(AccountInfo):
+class CredentialsResponse(BaseModel):
+    name: str
+    native_id: str
     accounts: list[AccountInfo]
 
 
@@ -60,32 +62,6 @@ class StatsItem(BaseModel):
     date: datetime.date
     campaign: str
     value: int
-
-
-async def valid_token(authorization_token: str = Header(None, min_length=1)) -> str:
-    # example token verification
-    if authorization_token != "super_secret_token":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="invalid authorization"
-        )
-    # maybe return any common info about token instead
-    return authorization_token
-
-
-async def valid_login(
-    authorization_login: str = Header(None, min_length=1),
-    authorization_password: str = Header(None, min_length=1),
-) -> tuple[str, str]:
-    # example login & password verification
-    if (
-        authorization_login != "super_secret_login"
-        or authorization_password != "super_secret_password"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="invalid authorization"
-        )
-    # maybe return any common info about login instead
-    return authorization_login, authorization_password
 
 
 # API endpoints
@@ -100,15 +76,24 @@ async def info():
     )
 
 
-@app.post("/accounts", response_model=AccountsResponse)
-async def accounts(token: str = Depends(valid_token)):
-    return AccountsResponse(
-        name="Account 1",
-        native_id="acc1",
+@app.post("/accounts", response_model=CredentialsResponse)
+async def accounts(authorization_token: str = Header(...)):
+    # само собой, проверка должна быть на стороне внешнего API и почти всегда при запросе данных,
+    # тут пример результатов обработки ответа с хардкодом токена
+    if authorization_token != "super_secret_token":
+        # пример обработки невалидного токена, например устаревший
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="invalid token"
+        )
+
+    # возвращаем информацию например о владельце токена и список его аккаунтов
+    return CredentialsResponse(
+        name="some-api-user@example.com",
+        native_id="user123321",
         accounts=[
-            AccountInfo("Account 1", "acc1"),
-            AccountInfo("Account 2", "acc2"),
-            AccountInfo("Account 3", "acc3"),
+            AccountInfo(name="Account 1", native_id="acc1"),
+            AccountInfo(name="Account 2", native_id="acc2"),
+            AccountInfo(name="Account 3", native_id="acc3"),
         ],
     )
 
@@ -116,36 +101,51 @@ async def accounts(token: str = Depends(valid_token)):
 @app.post("/check")
 async def check(
     native_id: str = Body(..., embed=True),
-    token: str = Depends(valid_token),
+    authorization_token: str = Header(...),
 ):
-    if native_id == "acc1":
-        return
-    elif native_id == "acc2":
+    # само собой, проверка должна быть на стороне внешнего API и почти всегда при запросе данных,
+    # тут пример результатов обработки ответа с хардкодом токена
+    if authorization_token != "super_secret_token":
+        # пример обработки невалидного токена, например устаревший
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="invalid authorization"
+            status_code=status.HTTP_403_FORBIDDEN, detail="invalid token"
         )
+
+    if native_id == "acc1":
+        # всё ок, по токену есть доступ к аккаунту
+        return
     elif native_id == "acc3":
+        # пример неизвестной ошибки
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="unknown error"
         )
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="unexpected native_id"
-    )
+
+    # пример отсутствия доступа к аккаунту по токену
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="account access denied")
 
 
 @app.post("/stats", response_model=list[StatsItem])
 async def stats(
     date: datetime.date = Body(..., embed=True),
     native_id: str = Body(..., embed=True),
-    token: str = Depends(valid_token),
+    authorization_token: str = Header(...),
 ):
+    # само собой, проверка должна быть на стороне внешнего API и почти всегда при запросе данных,
+    # тут пример результатов обработки ответа с хардкодом токена
+    if authorization_token != "super_secret_token":
+        # пример обработки невалидного токена, например устаревшего
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="invalid token"
+        )
+
     if native_id == "acc1":
+        # всё ок, по токену есть доступ к аккаунту и есть данные
         return [
-            # explicit model return
+            # явная передача модели
             StatsItem(
                 date=date, campaign="Campaign 1", value=random.randint(0, 100500)
             ),
-            # acceptable too, will be converted with validation into model automatically
+            # передача данных тоже допустима, fastapi конвертирует и валидирует автоматически
             {
                 "date": date,
                 "campaign": "Campaign 2",
@@ -153,11 +153,13 @@ async def stats(
             },
         ]
     elif native_id == "acc2":
+        # тоже всё ок, по токену есть доступ к аккаунту, но данных нет
         return []
     elif native_id == "acc3":
+        # пример неизвестной ошибки
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="unknown error"
         )
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="unexpected native_id"
-    )
+
+    # пример отсутствия доступа к аккаунту по токену
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="account access denied")
