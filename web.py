@@ -3,14 +3,13 @@ import datetime
 from enum import Enum
 from typing import Callable
 
+# App setup & middlewares
+from ext_api import AuthError, FakeExtAPI
 from fastapi import Body, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from starlette import status
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-
-# App setup & middlewares
-from ext_api import AuthError, FakeExtAPI
 
 app = FastAPI(
     title="Driver Service Example",
@@ -19,9 +18,7 @@ REQUEST_TIMEOUT = 600  # 10m
 
 
 @app.middleware("http")
-async def timeout_middleware(
-    request: Request, call_next: Callable[[Request], Response]
-):
+async def timeout_middleware(request: Request, call_next: Callable[[Request], Response]):
     """
     Limits request processing time and returns HTTP 408 when exceeds
     """
@@ -89,17 +86,12 @@ async def accounts(authorization_token: str = Header(...)):
         return CredentialsResponse(
             name=user_data["name"],
             native_id=user_data["id"],
-            accounts=[
-                AccountInfo(name=acc["name"], native_id=acc["id"])
-                for acc in api.get_accounts()
-            ],
+            accounts=[AccountInfo(name=acc["name"], native_id=acc["id"]) for acc in api.get_accounts()],
         )
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
 
 
 @app.post("/check")
@@ -112,9 +104,7 @@ async def check(
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
 
 
 @app.post("/stats", response_model=list[StatsItem])
@@ -138,6 +128,4 @@ async def stats(
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
