@@ -56,6 +56,10 @@ class CredentialsResponse(BaseModel):
     accounts: list[AccountInfo]
 
 
+class AccountsResponse(BaseModel):
+    accounts: list[AccountInfo]
+
+
 class StatsItem(BaseModel):
     date: datetime.date
     campaign: str
@@ -77,16 +81,27 @@ async def info():
     )
 
 
-@app.post("/accounts", response_model=CredentialsResponse)
+@app.post("/accounts", response_model=list[AccountInfo])
+async def accounts(authorization_token: str = Header(...)):
+    try:
+        api = FakeExtAPI(authorization_token)
+        # возвращаем список его аккаунтов
+        return [AccountInfo(name=acc["name"], native_id=acc["id"]) for acc in api.get_accounts()]
+    except AuthError as ex:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
+    except Exception as ex:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
+
+
+@app.post("/credentials", response_model=CredentialsResponse)
 async def accounts(authorization_token: str = Header(...)):
     try:
         api = FakeExtAPI(authorization_token)
         user_data = api.get_user_info()
-        # возвращаем информацию например о владельце токена и список его аккаунтов
+        # возвращаем информацию например о владельце токена
         return CredentialsResponse(
             name=user_data["name"],
             native_id=user_data["id"],
-            accounts=[AccountInfo(name=acc["name"], native_id=acc["id"]) for acc in api.get_accounts()],
         )
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
