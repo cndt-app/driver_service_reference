@@ -17,6 +17,7 @@
 
 * **/info**
 * **/accounts**
+* **/credentials
 * **/check**
 * **/stats**
 
@@ -57,30 +58,41 @@ Response - JSON
 }
 ```
 
+### API /credentials
+
+Метод возвращает базовую информацию из Partner API описывающую авторизационные данные.  
+Например имя пользователя и его айди в Partner API
+
+```
+POST /credentials
+Auth Required
+Request body - empty
+Response - JSON
+{
+  "name": "John Doe",
+  "native_id": "a329312c9cd"
+}
+```
+
 ### API /accounts
 
-Метод возвращает базовую информацию из Partner API идентифицирующую авторизационные данные, а также доступные Аккаунты.
+Метод возвращает из Partner API список доступных Аккаунтов.
 
 ```
 POST /accounts
 Auth Required
 Request body - empty
 Response - JSON
-{
-  "name": "John Doe",
-  "native_id": "a329312c9cd",
-  
-  "accounts": [
-    {
-      "name": "Sneakers Shop",  
-      "native_id": "b3933793c1cd",  
-    },
-    {
-      "name": "Auto Parts Shop",  
-      "native_id": "120aee9af4a0d",  
-    }
-  ]
-}
+[
+  {
+    "name": "Sneakers Shop",  
+    "native_id": "b3933793c1cd",  
+  },
+  {
+    "name": "Auto Parts Shop",  
+    "native_id": "120aee9af4a0d",  
+  }
+]
 ```
 
 ### API /check
