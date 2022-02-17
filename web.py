@@ -127,6 +127,7 @@ async def check(
 ):
     try:
         FakeExtAPI(authorization_token).get_account(native_id)
+        return Response(status_code=status.HTTP_200_OK)
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
