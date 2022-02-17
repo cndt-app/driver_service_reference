@@ -3,18 +3,32 @@ import datetime
 from enum import Enum
 from typing import Callable
 
-# App setup & middlewares
-from ext_api import AuthError, FakeExtAPI
 from fastapi import Body, FastAPI, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, BaseSettings, Field
 from starlette import status
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+# App setup & middlewares
+from ext_api import AuthError, FakeExtAPI
 
 app = FastAPI(
     title="Driver Service Example",
 )
 REQUEST_TIMEOUT = 600  # 10m
+
+
+class Settings(BaseSettings):
+    driver_name: str = Field("driver_name", env='DRIVER_NAME')
+    driver_slug: str = Field("driver_slug", env='DRIVER_SLUG')
+    driver_auth: list = Field(["login", "token"], env='DRIVER_AUTH')
+
+    class Config:
+        env_file = '.env'
+        env_file_encoding = 'utf-8'
+
+
+settings = Settings()
 
 
 @app.middleware("http")
@@ -42,7 +56,7 @@ class AuthType(Enum):
 class InfoResponse(BaseModel):
     name: str
     slug: str
-    auth_type: AuthType
+    auth_type: list[AuthType]
 
 
 class AccountInfo(BaseModel):
@@ -75,11 +89,10 @@ class StatsItem(BaseModel):
 @app.get("/info", response_model=InfoResponse)
 async def info():
     return InfoResponse(
-        name="Driver Service Example",
-        slug="driver_service_example",
-        auth_type=AuthType.token,
+        name=settings.driver_name,
+        slug=settings.driver_slug,
+        auth_type=settings.driver_auth,
     )
-
 
 @app.post("/accounts", response_model=list[AccountInfo])
 async def accounts(authorization_token: str = Header(...)):
@@ -91,7 +104,6 @@ async def accounts(authorization_token: str = Header(...)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
-
 
 @app.post("/credentials", response_model=CredentialsResponse)
 async def accounts(authorization_token: str = Header(...)):
@@ -108,25 +120,24 @@ async def accounts(authorization_token: str = Header(...)):
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
 
-
 @app.post("/check")
 async def check(
-    native_id: str = Body(..., embed=True),
-    authorization_token: str = Header(...),
+        native_id: str = Body(..., embed=True),
+        authorization_token: str = Header(...),
 ):
     try:
         FakeExtAPI(authorization_token).get_account(native_id)
+        return Response(status_code=status.HTTP_200_OK)
     except AuthError as ex:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ex))
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(ex))
 
-
 @app.post("/stats", response_model=list[StatsItem])
 async def stats(
-    date: datetime.date = Body(..., embed=True),
-    native_id: str = Body(..., embed=True),
-    authorization_token: str = Header(...),
+        date: datetime.date = Body(..., embed=True),
+        native_id: str = Body(..., embed=True),
+        authorization_token: str = Header(...),
 ):
     try:
         return [
