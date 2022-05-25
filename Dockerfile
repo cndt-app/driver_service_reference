@@ -8,6 +8,6 @@ ADD poetry.lock pyproject.toml /app/
 RUN poetry install --no-dev
 
 EXPOSE 8000
-ENTRYPOINT ["uvicorn", "web:app", "--port", "8000", "--host", "0.0.0.0"]
+ENTRYPOINT ["uvicorn", "src.web:app", "--port", "8090", "--host", "0.0.0.0"]
 
 ADD . /app/

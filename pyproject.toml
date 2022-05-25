@@ -8,10 +8,12 @@ authors = ["Conduit.app <support@cndt.app>"]
 python = "~3.9"
 fastapi = "^0.70.1"
 uvicorn = "^0.16.0"
+tzdata = "*"
 
 [tool.poetry.dev-dependencies]
 black = "^21.12b0"
 isort = "^5.10.1"
+ipython = "^8.3.0"
 
 [tool.isort]
 profile = "hug"

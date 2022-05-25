@@ -11,19 +11,7 @@
   сущность (например для запроса аналитической статистики нужно передать сайт+конкретный отчет - в таком случае Драйвер
   может генерировать Аккаунты из набора сайт+отчет).
 
-## Driver’s API
-
-Драйвер должен реализовать 4 метода:
-
-* **/info**
-* **/accounts**
-* **/credentials
-* **/check**
-* **/stats**
-
 ### Авторизация запросов
-
-Методы, за исключением **/info** должны ожидать передачи авторизационных данных.
 
 Авторизационные данные будут передаваться в хедерах при вызове API драйвера, для дальнейшей авторизации в Partner API.
 
@@ -43,76 +31,17 @@
 
 * Authorization-Token
 
-### API /info
+## Driver’s API
 
-Метод возвращает базовую информацию о драйвере и поддерживаемом методе передачи Авторизационных данных.
+Драйвер должен реализовать 1 метода:
 
-```
-GET /info
-Request body - empty
-Response - JSON
-{
-  "name": str,  # Название Драйвера. Не должно меняться  
-  "slug": str,  # [a-z_] Техническое название Драйвера. Не должно меняться. 
-  "auth_type": str # ENUM [ "login", "token" ] 
-}
-```
+* **/stats**
 
-### API /credentials
-
-Метод возвращает базовую информацию из Partner API описывающую авторизационные данные.  
-Например имя пользователя и его айди в Partner API
-
-```
-POST /credentials
-Auth Required
-Request body - empty
-Response - JSON
-{
-  "name": "John Doe",
-  "native_id": "a329312c9cd"
-}
-```
-
-### API /accounts
-
-Метод возвращает из Partner API список доступных Аккаунтов.
-
-```
-POST /accounts
-Auth Required
-Request body - empty
-Response - JSON
-[
-  {
-    "name": "Sneakers Shop",  
-    "native_id": "b3933793c1cd",  
-  },
-  {
-    "name": "Auto Parts Shop",  
-    "native_id": "120aee9af4a0d",  
-  }
-]
-```
-
-### API /check
-
-Выполняет проверку доступа к аккаунту
-
-```
-POST /check
-Auth Required
-Request body - JSON
-{
-  "native_id": str # account native id 
-}
-
-Response - HTTP OK or HTTP ERROR
-```
 
 ### API /stats
 
-Возвращает статистику в согласованном формате с набором определенных полей итд
+Возвращает статистику в согласованном формате с набором определенных полей итд.  
+Набор полей привязан к конкретной схеме данных и не должен отличаться.  
 
 ```
 POST /stats
@@ -120,6 +49,7 @@ Auth Required
 Request body - JSON
 {
   "date": str, # iso date string
+  "tz": str, #  IANA time zone - example "US/Pacific" ( python zoneinfo ) 
   "native_id": str, # account native id 
 }
 Response - JSON
