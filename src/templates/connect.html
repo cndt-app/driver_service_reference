@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Connect Example</title>
+
+    <style>
+        .form-container {
+            max-width: 15em;
+            margin: 1em auto;
+        }
+
+        form label {
+            width: 5em;
+            display: inline-block;
+        }
+        .form-row, .form-submit-row, .form-error-row {
+            margin-bottom: 0.5em;
+        }
+        .form-submit-row {
+            text-align: right;
+        }
+        .form-error-row {
+            color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <form method="POST">
+            <div class="form-row">
+                <label>Brand</label>
+                <input name="brand" value="{{ form_data.brand|default('') }}">
+            </div>
+            <div class="form-row">
+                <label>Login</label>
+                <input name="login" value="{{ form_data.login|default('') }}">
+            </div>
+            <div class="form-row">
+                <label>Password</label>
+                <input name="password" type="password" value="{{ form_data.password|default('') }}">
+            </div>
+            {% if error %}
+            <div class="form-error-row">
+                {{ error }}
+            </div>
+            {% endif %}
+            <div class="form-submit-row">
+                <button type="submit">Connect</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

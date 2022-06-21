@@ -1,37 +1,21 @@
-import asyncio
 import datetime
 import zoneinfo
 from decimal import Decimal
 from enum import Enum
-from typing import Callable
 
-# App setup & middlewares
-from fastapi import Body, FastAPI, Header, HTTPException
+from fastapi import Body, Header, HTTPException, APIRouter, Form
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from starlette import status
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
 
-from .ext_api import AuthError, FakeExtAPI
-
-app = FastAPI(
-    title="Driver Service Example",
-)
-REQUEST_TIMEOUT = 600  # 10m
+from src.driver.ext_api import FakeExtAPI, AuthError
+from src.driver.conduit_lib import make_result_script
 
 
-@app.middleware("http")
-async def timeout_middleware(request: Request, call_next: Callable[[Request], Response]):
-    """
-    Limits request processing time and returns HTTP 408 when exceeds
-    """
-    try:
-        return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT)
-    except asyncio.TimeoutError:
-        return JSONResponse(
-            {"detail": "request processing timeout"},
-            status_code=status.HTTP_408_REQUEST_TIMEOUT,
-        )
+templates = Jinja2Templates(directory='src/templates')
+router = APIRouter()
 
 
 # API Schema
@@ -71,7 +55,42 @@ class AdStatsItem(BaseModel):
 # API endpoints
 
 
-@app.post("/stats", response_model=list[AdStatsItem])
+@router.api_route('/connect', methods=['GET', 'POST'], response_class=HTMLResponse)
+async def show_connect(
+    request: Request,
+    # query parameters from Conduit
+    rid: str,
+    origin: str,
+    # data submitted by form
+    brand: str = Form(''),
+    login: str = Form(''),
+    password: str = Form(''),
+):
+
+    # show form
+    if request.method == 'GET':
+        return templates.TemplateResponse('connect.html', {'request': request, 'form_data': {}, 'error': None})
+
+    secrets = {
+        'brand': brand,
+        'login': login,
+        'password': password,
+    }
+    # pseudo-validation
+    if not all(secrets.values()):
+
+        return templates.TemplateResponse(
+            'connect.html',
+            {'request': request, 'form_data': secrets, 'error': 'Please fill all fields'},
+        )
+
+    return templates.TemplateResponse(
+        'result.html',
+        {'request': request, 'result_script': make_result_script(rid=rid, origin=origin, secrets=secrets)}
+    )
+
+
+@router.post("/stats", response_model=list[AdStatsItem])
 async def stats(
     date: datetime.date = Body(..., embed=True, example='2022-01-01'),
     tz: str = Body(..., embed=True, example='Europe/Monaco'),
