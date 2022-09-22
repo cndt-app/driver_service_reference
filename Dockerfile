@@ -1,9 +1,9 @@
 FROM python:3.9
 
-RUN pip install --no-input --no-cache-dir --disable-pip-version-check poetry && \
-    poetry config virtualenvs.create false
 WORKDIR /app
 
+RUN pip install --no-cache-dir --disable-pip-version-check poetry==1.2.* && \
+     poetry config virtualenvs.create false
 ADD poetry.lock pyproject.toml /app/
 RUN poetry install --no-dev
 
